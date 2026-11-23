@@ -20,8 +20,11 @@
   "CLOCK_PERIOD": 20,
 
   "//": "Hold slack margin - Increase them in case you are getting hold violations.",
-  "PL_RESIZER_HOLD_SLACK_MARGIN": 0.1,
-  "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.05,
+  "//": "tt_pid8: lowered from 0.1 / 0.05. With 0.1 the resizer added 218 hold buffers",
+  "//": "(183 endpoints, almost all with positive slack) and detailed placement failed.",
+  "//": "The signoff STA still includes the 0.25 ns clock uncertainty of the TT SDC.",
+  "PL_RESIZER_HOLD_SLACK_MARGIN": 0.03,
+  "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.02,
 
   "//": "RUN_LINTER, LINTER_INCLUDE_PDK_MODELS - Disabling the linter is not recommended!",
   "RUN_LINTER": 1,
