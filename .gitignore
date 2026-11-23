@@ -11,3 +11,10 @@ test/sim_build
 test/__pycache__/
 test/results.xml
 test/gate_level_netlist.v
+test/output
+sim/build
+wokwi/build
+synth/lib
+synth/results/*.log
+synth/results/*_netlist.v
+__pycache__/

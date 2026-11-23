@@ -31,6 +31,17 @@ jobs:
           # make will return success even if the tests fail, so check results.xml for failed tests
           python -m cocotb_tools.check_results results.xml
 
+      # Extra: the Icarus testbench of this project (bit-exact model, 20 000 random samples)
+      - name: Run Icarus testbench
+        shell: bash
+        run: |
+          mkdir -p sim/build
+          RTL="src/pid_sync.v src/pid8_tick.v src/pid8_regs.v src/pid8_core.v src/tt_um_duarte_diamantino_pid8.v"
+          iverilog -g2005 -Wall -s tt_um_duarte_diamantino_pid8 -o /dev/null $RTL
+          iverilog -g2012 -Wall -Wno-timescale -s tb_pid8 -o sim/build/tb_rtl.vvp sim/tb_pid8.v $RTL
+          vvp -n sim/build/tb_rtl.vvp +N=20000 | tee sim/build/tb_rtl.log
+          grep -q "TEST PASSED" sim/build/tb_rtl.log
+
       - name: Test Summary
         uses: test-summary/action@v2.4
         with:
@@ -46,3 +57,4 @@ jobs:
             test/tb.fst
             test/results.xml
             test/output/*
+            sim/build/tb_rtl.log

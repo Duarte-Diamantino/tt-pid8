@@ -1,0 +1,12 @@
+# Yosys: tt_um_duarte_diamantino_pid8 -> only the logic parts that Wokwi has
+# (NOT, AND, OR, XOR, NAND, NOR, XNOR with 2 inputs, MUX2, D flip-flop,
+#  D flip-flop with asynchronous set/reset). Hierarchy is kept so that the
+# generator can group the gates by block.
+read_verilog ../src/pid_sync.v ../src/pid8_tick.v ../src/pid8_regs.v ../src/pid8_core.v ../src/tt_um_duarte_diamantino_pid8.v
+hierarchy -check -top tt_um_duarte_diamantino_pid8
+synth -top tt_um_duarte_diamantino_pid8 -noabc
+dfflegalize -cell $_DFF_P_ x -cell $_DFF_PN0_ x -cell $_DFF_PN1_ x
+abc -g AND,NAND,OR,NOR,XOR,XNOR,MUX
+opt_clean -purge
+tee -o build/gates.stat stat
+write_json build/gates.json

@@ -1,0 +1,11 @@
+{
+  "name": "Plant 1st order, 8-bit input + trend",
+  "author": "tt_pid",
+  "pins": ["U0", "U1", "U2", "U3", "U4", "U5", "U6", "U7", "DIST", "SP", "GND", "Y", "VCC"],
+  "controls": [
+    { "id": "tauMs", "label": "Time constant tau (ms)", "type": "range", "min": 50, "max": 3000, "step": 10 },
+    { "id": "load",  "label": "Load disturbance when DIST=1", "type": "range", "min": 0, "max": 150, "step": 5 },
+    { "id": "gain",  "label": "Plant gain", "type": "range", "min": 0.5, "max": 1.5, "step": 0.05 }
+  ],
+  "display": { "width": 200, "height": 120 }
+}
