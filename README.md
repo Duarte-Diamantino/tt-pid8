@@ -26,18 +26,37 @@ público, com os mesmos quatro ficheiros de `wokwi/`.
 | Leitura dos registos | sim (pino RD) | não (só escrita) |
 | Timer de amostragem | 16 bits | 12 bits |
 | Ciclos por amostra | 51 | **39** |
-| Área após síntese (SKY130 HD) | 15 168 µm² | **10 016 µm²** (medido) |
+| Área após síntese (SKY130 HD, células `_1`) | 15 168 µm² | **10 016 µm²** (medido) |
 | Células / flip-flops | 1582 / 311 | **1018 / 213** |
-| Tile | 1x2 | **1x1** (55 % antes do place & route) |
+| Tile | 1x2 | **1x1: 84,1 % de ocupação no layout final** |
 
-**Cabe num tile?** Provavelmente, mas à justa. Depois da síntese ocupa 55 % de
-um tile 1x1 (~18 000 µm²). O place & route costuma acrescentar 10 a 25 %, o que
-dá 61 a 69 %: acima da densidade alvo do fluxo (60 %) e abaixo dos máximos que
-costumam fechar (~80 %). Só o job `gds` do GitHub do Tiny Tapeout confirma. Se
-não fechar, retirar o registo Kd (passa a PI) poupa cerca de 500 µm²
-(estimativa: 12 flip-flops e a respetiva escrita).
+### Layout no fluxo do Tiny Tapeout
 
-Área por bloco (medida, hierarquia preservada):
+Resultado do job `gds` no GitHub (shuttle SKY26e). O layout passou nas
+verificações finais: precheck, teste gate level, DRC, LVS e antena.
+
+| Métrica | Valor |
+|---|---|
+| Área das células na síntese do próprio fluxo | 11 965 µm² (o fluxo usa células `_2`, maiores que as `_1` de `synth/synth.sh`) |
+| Ocupação final do tile, com buffers, árvore de relógio e reparações | **84,1 %** (13 877 de 16 493 µm²) |
+| Setup, pior folga com relógio de 20 ns (50 MHz) | +7,4 ns, no canto lento (100 °C, 1,6 V): dá para cerca de 79 MHz |
+| Hold, pior folga | +0,04 ns, no canto rápido |
+| DRC, LVS, antena | 0 erros |
+| Avisos | max slew: 11 no canto típico e até 423 no canto lento; max fanout: 14 |
+
+À primeira tentativa, com o `src/config.json` do template, a colocação falhou.
+O fluxo meteu 218 buffers de hold, para cumprir uma margem extra de 0,1 ns em
+183 ligações, quando só uma violava mesmo o hold. Com as margens em 0,03/0,02 ns
+fecha, e a verificação final de timing continua a incluir os 0,25 ns de
+incerteza do relógio do Tiny Tapeout. O tile fica muito cheio (o Tiny Tapeout
+diz que até cerca de 80 % costuma funcionar), por isso acrescentar lógica
+obriga a tirar outra, ou a passar para 1x2.
+
+Os avisos de slew são transições mais lentas do que o limite da biblioteca,
+quase todas no canto lento. Não impedem a submissão. O timing de setup tem
+mais de 7 ns de folga mesmo nesse canto, e a 10 MHz a folga é muito maior.
+
+Área por bloco (medida com `synth/synth.sh`, células `_1`, hierarquia preservada):
 
 | Bloco | µm² | Flip-flops |
 |---|---:|---:|
@@ -186,7 +205,8 @@ parte, como no CI do Tiny Tapeout: `cd test && make` (com `pip install -r test/r
 | RTL pelos pinos | [sim/tb_pid8.v](sim/tb_pid8.v), modelo bit-exato | 20 000 amostras aleatórias sem erros, com ganhos 0 e máximos, AW, REV, CLR e as três fontes de tick. Os casos limite (HOLD, SAT_HI, SAT_LO e os dois limites do integrador) aparecem milhares de vezes. Também testa: timer (100 ciclos com TS = 99), BUSY de 38 ciclos, EN = 0, reset assíncrono sem relógio e malha fechada (overshoot 7,8 %, erro final 0 com carga) |
 | Portas do `diagram.json` | o mesmo testbench sobre `wokwi/build/pid8_gates.v` | 3000 amostras sem erros, com Q inicial dos flip-flops a 1 e a 0 (10 000 amostras) |
 | Planta | [wokwi/test/plant8_host.c](wokwi/test/plant8_host.c) nativo | τ, y = 153,0 e carga → 78,0 |
-| Síntese SKY130 | [synth/synth.sh](synth/synth.sh) | 10 016 µm², 1018 células, 213 FF |
+| Síntese SKY130 | [synth/synth.sh](synth/synth.sh) | 10 016 µm², 1018 células, 213 FF (células `_1`; o fluxo do Tiny Tapeout dá 11 965 µm²) |
+| Layout (GitHub Actions) | `gds`, `precheck`, `gl_test` | passam: 84,1 % do tile, 0 erros de DRC, LVS e antena, timing sem violações |
 | Wokwi (browser) | ficheiros do projeto comparados por hash com os desta pasta | tabela acima |
 
 Um erro apanhado pelo testbench: o contador de passos do MAC tinha 4 bits e, com
@@ -203,7 +223,7 @@ O teste de latência (T5) detetou-o, e o contador agora volta a 0 no último pas
 | `src/pid8_regs.v` | barramento e registos (só escrita) |
 | `src/pid8_tick.v` | instante de amostragem (timer de 12 bits, pino, escrita de FB, software) |
 | `src/pid_sync.v` | sincronizador dos pinos WR e TICK (o mesmo da versão de 10 bits) |
-| `src/config.json` | configuração do fluxo de layout (a do template, sem alterações) |
+| `src/config.json` | configuração do fluxo de layout: a do template, com as margens de hold baixadas para 0,03/0,02 ns |
 | `info.yaml` | metadados Tiny Tapeout para 1x1 |
 | `docs/info.md` | página do datasheet do Tiny Tapeout |
 | `test/` | testes cocotb no formato do template (RTL e gate level) |
@@ -225,9 +245,12 @@ Esta pasta já é a raiz do repositório, no formato do template
 `ttsky-verilog-template`, com o módulo de topo `tt_um_duarte_diamantino_pid8`.
 No Wokwi, os textos do projeto continuam a dizer `tt_um_pid8`: o circuito é o mesmo.
 
-1. No GitHub, em *Settings → Pages*, escolha *GitHub Actions* como origem. O job `viewer` precisa disto.
-2. A cada push correm os workflows `gds` (layout, precheck, teste gate level),
-   `test` (cocotb e testbench Icarus) e `docs`. Confirme no resumo do `gds` a
-   ocupação real do tile e o timing.
-3. Com tudo verde, submeta em <https://app.tinytapeout.com>: entre com a conta
+Repositório: <https://github.com/Duarte-Diamantino/tt-pid8>, criado a partir do
+template, com o GitHub Pages a servir o visualizador do layout em
+<https://duarte-diamantino.github.io/tt-pid8/>.
+
+1. A cada push correm os workflows `gds` (layout, precheck, teste gate level),
+   `test` (cocotb e testbench Icarus) e `docs`. O resumo do `gds` mostra a
+   ocupação do tile e o timing.
+2. Com tudo verde, submeta em <https://app.tinytapeout.com>: entre com a conta
    do GitHub, escolha o shuttle e o repositório, e pague o tile.

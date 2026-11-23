@@ -7,8 +7,8 @@ project:
   language:     "Verilog"
   clock_hz:     10000000  # any clock works; the timer and the bus timing scale with it
 
-  # Measured (Yosys, SKY130 HD): 10 016 um2 of cells, 213 flip-flops = 55 % of a
-  # 1x1 tile BEFORE place & route (estimated 61-69 % after). Confirm in the gds job.
+  # gds job (SKY26e): 11 965 um2 of cells after synthesis, 213 flip-flops,
+  # 84.1 % utilisation of the 1x1 tile after place & route (see src/config.json).
   tiles: "1x1"
 
   top_module:  "tt_um_duarte_diamantino_pid8"
